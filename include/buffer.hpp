@@ -43,6 +43,7 @@ public:
   BuffHead(Buffer *buff, framecount_t frame_i):buff(buff), frame_i(frame_i){};
   BuffHead(Buffer *buff):buff(buff), frame_i(0){};
   inline framecount_t getpos(){return frame_i;};
+  inline Buffer *get_buff(){return buff;};
   buffindex_t framecount_to_buffindex(framecount_t fc);
   void *get_ptr();
 };
@@ -68,6 +69,8 @@ public:
   framecount_t set_to_newest();
   void pop_copy_block(framecount_t fc, void *p);
   void pop_copy_noblock(framecount_t fc, void *p);
+  void wait_frames(framecount_t fc);
+  framecount_t wait_frames_memcontine(framecount_t fc);
 };
 
 class BuffHeadReads{
@@ -98,6 +101,7 @@ public:
   friend class BuffHead;
   friend class BuffHeadRead;
   friend class BuffHeadWrite;
+  inline size_t get_framesize(){return f_size;};
 };
 
 #endif

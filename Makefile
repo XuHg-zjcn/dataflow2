@@ -7,14 +7,19 @@
 # without any warranty.
 
 CXXFLAGS = -Iinclude -g
+CFLAGS = -Iinclude -g
+
 
 all: test
 
-buffer.o: src/buffer.cpp
+%.o: src/%.cpp
 	${CXX} ${CXXFLAGS} $^ -c -o $@
 
-test: src/test.cpp buffer.o
+%.o: src/%.c
+	${CC} ${CFLAGS} $^ -c -o $@
+
+test: src/test.cpp buffer.o writer.o misc.o
 	${CXX} ${CXXFLAGS} $^ -o $@
 
 clean:
-	rm buffer.o test
+	rm *.o test

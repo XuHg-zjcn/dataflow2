@@ -122,6 +122,24 @@ void BuffHeadRead::pop_copy_block(framecount_t fc, void *p)
   }
 }
 
+void BuffHeadRead::wait_frames(framecount_t fc)
+{
+  while(frames_avaible() < fc){
+    unique_lock<mutex> lock(buff->mtx_r);
+    buff->cv_r.wait(lock);
+  }
+}
+
+framecount_t BuffHeadRead::wait_frames_memcontine(framecount_t fc)
+{
+  framecount_t fright = buff->fc_cap - framecount_to_buffindex(frame_i);
+  if(fright < fc){
+    fc = fright;
+  }
+  wait_frames(fc);
+  return fc;
+}
+
 framecount_t BuffHeadReads::get_firstkeep()
 {
   framecount_t m = heads[0]->getpos();

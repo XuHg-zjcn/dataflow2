@@ -19,18 +19,20 @@
 #include <cstdlib>
 //#include <iostream>
 #include "buffer.hpp"
+#include "writer.hpp"
 
 using namespace std;
 
 //多线程使用cout会出现消息混合现象，因此改用printf
 void Pub(BuffHeadWrite *hw, string tag)
 {
-  for(int i=0;i<10;i++){
+  for(int i=0;i<1000;i++){
     uint64_t data = i;
     hw->push_block(1, &data);
     //cout << "put data:" << data << endl;
     printf("%s%ld\n", tag.c_str(), data);
-    this_thread::sleep_for(chrono::seconds(1));
+    this_thread::sleep_for(chrono::milliseconds(20));
+    //TODO: 注释掉延时函数会导致未全部发送就卡住问题，待修复
   }
 }
 
@@ -44,14 +46,22 @@ void Sub(BuffHeadRead *hr, string tag)
   }
 }
 
+void Rec(BuffHeadRead *hr, string pathfmt)
+{
+  Writer writer(hr, pathfmt, 10, 1024);
+  writer.run();
+}
+
 int main()
 {
-  Buffer buff = Buffer(8, 5);
+  Buffer buff = Buffer(8, 100);
   thread pub(Pub, &buff.w_head, "pub : ");
-  thread sub1(Sub, buff.r_heads.new_head(), "sub1: ");
-  thread sub2(Sub, buff.r_heads.new_head(), "sub2: ");
+  //thread sub1(Sub, buff.r_heads.new_head(), "sub1: ");
+  //thread sub2(Sub, buff.r_heads.new_head(), "sub2: ");
+  thread rec(Rec, buff.r_heads.new_head(), "data/rec_%Y%m%d_%#.dat");
   pub.join();
-  sub1.join();
-  sub2.join();
+  //sub1.join();
+  //sub2.join();
+  rec.join();
   return 0;
 }
