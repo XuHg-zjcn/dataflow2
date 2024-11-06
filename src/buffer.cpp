@@ -16,7 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  ************************************************************************/
 #include "buffer.hpp"
+#include "config.hpp"
 
+
+//member functions of BuffHead
 buffindex_t BuffHead::framecount_to_buffindex(framecount_t fc)
 {
   return fc%(buff->fc_cap);
@@ -27,6 +30,8 @@ void *BuffHead::get_ptr()
   return buff->p + framecount_to_buffindex(frame_i)*buff->f_size;
 }
 
+
+//member functions of BuffHeadWrite
 framecount_t BuffHeadWrite::fcap_remain()
 {
   return buff->fc_cap - (frame_i - buff->r_heads.get_firstkeep());
@@ -50,10 +55,12 @@ int BuffHeadWrite::push_noblock(framecount_t fc, void *p)
   if(fc > fcap_remain()){
     return -1;
   }
+  //TODO: fix 填充超过缓冲区尾部
   memcpy(get_ptr(), p, fc*buff->f_size);
   frame_i += fc;
 }
 
+#if !WHEAD_FORCE_ONLY
 int BuffHeadWrite::push_block(framecount_t fc, void *p)
 {
   while(fc > 0){
@@ -70,14 +77,28 @@ int BuffHeadWrite::push_block(framecount_t fc, void *p)
     frame_i += n;
     p += buff->f_size*n;
     fc -= n;
+#if RHEAD_BLOCK_EN
     //unique_lock<mutex> lock(buff->mtx_r);
     buff->cv_r.notify_all();
+#endif
   }
   if(frame_i != buff->r_heads.get_firstkeep()){
     buff->full = false;
   }
 }
+#endif
 
+#if ALLOW_OVERWRITE
+int BuffHeadWrite::push_force(framecount_t fc, void *p)
+{
+  memcpy(get_ptr(), p, fc*buff->f_size);
+  frame_i += fc;
+  return frame_i;
+}
+#endif
+
+
+//member functions of BuffHeadRead
 framecount_t BuffHeadRead::frames_avaible()
 {
   return buff->w_head.getpos() - frame_i;
@@ -96,30 +117,98 @@ framecount_t BuffHeadRead::frames_avaible_memcontine()
   }
 }
 
+#if ALLOW_OVERWRITE
+bool BuffHeadRead::hasOverwrite(){
+  return buff->w_head.getpos() - frame_i > buff->fc_cap;
+}
+#endif
+
 int BuffHeadRead::drop(framecount_t fc)
 {
   frame_i += fc;
 }
 
-void BuffHeadRead::pop_copy_block(framecount_t fc, void *p)
+void BuffHeadRead::set_to_newest()
 {
-  while(fc > 0){
+  frame_i = buff->w_head.getpos();
+}
+
+framecount_t BuffHeadRead::pop_copy_noblock_base(framecount_t fc, void *p)
+{
+  framecount_t bi = framecount_to_buffindex(frame_i);
+  if(bi + fc > buff->fc_cap){
+    framecount_t f1 = buff->fc_cap - bi;
+    memcpy(p, get_ptr(), f1*buff->f_size);
+    frame_i += f1;
+    p += f1*buff->f_size;
+    framecount_t f2 = fc-f2;
+    memcpy(p, get_ptr(), f2*buff->f_size);
+    frame_i += f2;
+    p += f2*buff->f_size;
+  }else{
+    memcpy(p, get_ptr(), fc*buff->f_size);
+    frame_i += fc;
+    p += fc*buff->f_size;
+  }
+  return fc;
+}
+
+framecount_t BuffHeadRead::pop_copy_noblock_fail(framecount_t fc, void *p)
+{
+#if ALLOW_OVERWRITE
+  if(hasOverwrite()){
+    return -1;
+  }
+#endif
+  if(frames_avaible() < fc){
+    return -1;
+  }
+  return pop_copy_noblock_base(fc, p);
+}
+
+framecount_t BuffHeadRead::pop_copy_noblock_redu(framecount_t fc, void *p)
+{
+#if ALLOW_OVERWRITE
+  if(hasOverwrite()){
+    return -1;
+  }
+#endif
+  framecount_t fa = frames_avaible();
+  if(fa < fc){
+    fc = fa;
+  }
+  return pop_copy_noblock_base(fc, p);
+}
+
+#if RHEAD_BLOCK_EN
+framecount_t BuffHeadRead::pop_copy_block(framecount_t fc, void *p)
+{
+#if ALLOW_OVERWRITE
+  if(hasOverwrite()){
+    return -1;
+  }
+#endif
+  framecount_t fc_ = fc;
+  while(fc_ > 0){
     if(frame_i == buff->w_head.getpos()){
       unique_lock<mutex> lock(buff->mtx_r);
       buff->cv_r.wait(lock);
     }
     framecount_t n = frames_avaible_memcontine();
-    if(fc < n){
-      n = fc;
+    if(fc_ < n){
+      n = fc_;
     }
     memcpy(p, get_ptr(), n*buff->f_size);
     frame_i += n;
     p += n*buff->f_size;
-    fc -= n;
+    fc_ -= n;
+#if !WHEAD_FORCE_ONLY
     if(buff->full){
       buff->cv_w.notify_all();
     }
+#endif
   }
+  return fc;
 }
 
 void BuffHeadRead::wait_frames(framecount_t fc)
@@ -139,7 +228,10 @@ framecount_t BuffHeadRead::wait_frames_memcontine(framecount_t fc)
   wait_frames(fc);
   return fc;
 }
+#endif
 
+
+//member functions of BuffHeadReads
 framecount_t BuffHeadReads::get_firstkeep()
 {
   framecount_t m = heads[0]->getpos();

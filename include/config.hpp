@@ -23,4 +23,21 @@
 typedef int32_t framecount_t;
 typedef int32_t buffindex_t;
 
+#define THREAD_SYNC_EN    1 //使用线程同步
+#define ALLOW_OVERWRITE   0 //允许覆盖
+#define WHEAD_FORCE_ONLY  0 //写头总是强制
+#define RHEAD_BLOCK_EN    1 //读头等待开启
+
+#if (WHEAD_FORCE_ONLY && !ALLOW_OVERWRITE)
+#error "enable WHEAD_FORCE_ONLY must ALLOW_OVERWRITE"
+#endif
+
+#if (!THREAD_SYNC_EN && !WHEAD_FORCE_ONLY)
+#error "w_head not force-only mode must THREAD_SYNC_EN"
+#endif
+
+#if (!THREAD_SYNC_EN && RHEAD_BLOCK_EN)
+#error "enable r_head blocking must THREAD_SYNC_EN"
+#endif
+
 #endif

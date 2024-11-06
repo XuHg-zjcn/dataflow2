@@ -23,7 +23,7 @@
 #include <vector>
 #include <mutex>
 #include <condition_variable>
-#include <config.hpp>
+#include "config.hpp"
 
 using namespace std;
 
@@ -55,22 +55,36 @@ public:
   framecount_t fcap_remain();
   framecount_t fcap_remain_memcontine();
   int push_noblock(framecount_t fc, void *p);
+#if !WHEAD_FORCE_ONLY
   int push_block(framecount_t fc, void *p);
+#endif
+#if ALLOW_OVERWRITE
+  int push_force(framecount_t fc, void *p);
+#endif
 };
 
 class BuffHeadRead : public BuffHead{
+private:
+  framecount_t pop_copy_noblock_base(framecount_t fc, void *p);
 public:
-  
   BuffHeadRead(Buffer *buff, framecount_t frame_i):BuffHead(buff, frame_i){};
   BuffHeadRead(Buffer *buff):BuffHead(buff){};
   framecount_t frames_avaible(); //可用帧
   framecount_t frames_avaible_memcontine(); //
+#if ALLOW_OVERWRITE
+  bool hasOverwrite();
+#else
+  inline bool hasOverwrite(){return false;};
+#endif
   int drop(framecount_t fc);
-  framecount_t set_to_newest();
-  void pop_copy_block(framecount_t fc, void *p);
-  void pop_copy_noblock(framecount_t fc, void *p);
+  void set_to_newest();
+  framecount_t pop_copy_noblock_fail(framecount_t fc, void *p);
+  framecount_t pop_copy_noblock_redu(framecount_t fc, void *p);
+#if RHEAD_BLOCK_EN
+  framecount_t pop_copy_block(framecount_t fc, void *p);
   void wait_frames(framecount_t fc);
   framecount_t wait_frames_memcontine(framecount_t fc);
+#endif
 };
 
 class BuffHeadReads{
@@ -88,12 +102,15 @@ private:
   void *p;
   size_t f_size;
   framecount_t fc_cap;
+#if !WHEAD_FORCE_ONLY
   mutex mtx_w;
   condition_variable cv_w;
+  bool full; //未读数据满了，写头被阻塞
+#endif
+#if RHEAD_BLOCK_EN
   mutex mtx_r;
   condition_variable cv_r;
-  bool full;
-  bool hasEmpty;
+#endif
 public:
   Buffer(size_t f_size, framecount_t fc_cap);
   BuffHeadWrite w_head;
