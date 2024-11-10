@@ -19,14 +19,33 @@
 #define CONFIG_HPP
 
 #include <stdint.h>
+#ifdef EXTERN_CONFIG_FILE
+#include "config_dataflow2.hpp"
+#endif
+
 
 typedef int32_t framecount_t;
 typedef int32_t buffindex_t;
 
+#ifndef THREAD_SYNC_EN
 #define THREAD_SYNC_EN    1 //使用线程同步
+#endif
+
+#ifndef ALLOW_OVERWRITE
+#if defined(WHEAD_FORCE_ONLY) && (WHEAD_FORCE_ONLY==1)
+#define ALLOW_OVERWRITE   1
+#else
 #define ALLOW_OVERWRITE   0 //允许覆盖
+#endif
+#endif
+
+#ifndef WHEAD_FORCE_ONLY
 #define WHEAD_FORCE_ONLY  0 //写头总是强制
+#endif
+
+#ifndef REHAD_BLOCK_EN
 #define RHEAD_BLOCK_EN    1 //读头等待开启
+#endif
 
 #if (WHEAD_FORCE_ONLY && !ALLOW_OVERWRITE)
 #error "enable WHEAD_FORCE_ONLY must ALLOW_OVERWRITE"

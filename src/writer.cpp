@@ -75,7 +75,7 @@ void Writer::open_newfile()
   bool has_time = false;
   bool has_num = false;
   size_t len = pathfmt.length();
-  struct tm *tm;
+  struct tm *tm = nullptr;
   int x = -1;
   while(1){
     x = pathfmt.find('%', x+1);

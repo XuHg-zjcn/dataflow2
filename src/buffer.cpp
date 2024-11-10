@@ -58,6 +58,7 @@ int BuffHeadWrite::push_noblock(framecount_t fc, void *p)
   //TODO: fix 填充超过缓冲区尾部
   memcpy(get_ptr(), p, fc*buff->f_size);
   frame_i += fc;
+  return fc;
 }
 
 #if !WHEAD_FORCE_ONLY
@@ -85,6 +86,7 @@ int BuffHeadWrite::push_block(framecount_t fc, void *p)
   if(frame_i != buff->r_heads.get_firstkeep()){
     buff->full = false;
   }
+  return fc;
 }
 #endif
 
@@ -126,6 +128,7 @@ bool BuffHeadRead::hasOverwrite(){
 int BuffHeadRead::drop(framecount_t fc)
 {
   frame_i += fc;
+  return fc;
 }
 
 void BuffHeadRead::set_to_newest()
@@ -141,7 +144,7 @@ framecount_t BuffHeadRead::pop_copy_noblock_base(framecount_t fc, void *p)
     memcpy(p, get_ptr(), f1*buff->f_size);
     frame_i += f1;
     p += f1*buff->f_size;
-    framecount_t f2 = fc-f2;
+    framecount_t f2 = fc-f1;
     memcpy(p, get_ptr(), f2*buff->f_size);
     frame_i += f2;
     p += f2*buff->f_size;
