@@ -150,6 +150,7 @@ void Writer::run()
     }
     void *p = hr->get_ptr();
     framecount_t fc = hr->wait_frames_memcontine(copy_block);
+    printf("writer get %ld elems\n", fc);
     ofs.write((const char *)p, fc*hr->get_buff()->get_framesize());
     hr->drop(fc);
   }

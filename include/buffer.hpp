@@ -66,8 +66,11 @@ public:
 class BuffHeadRead : public BuffHead{
 private:
   framecount_t pop_copy_noblock_base(framecount_t fc, void *p);
+#if RHEAD_BLOCK_EN
+  framecount_t wait_until;
+#endif
 public:
-  BuffHeadRead(Buffer *buff, framecount_t frame_i):BuffHead(buff, frame_i){};
+  BuffHeadRead(Buffer *buff, framecount_t frame_i):BuffHead(buff, frame_i),wait_until(FRAMECOUNT_MAX){};
   BuffHeadRead(Buffer *buff):BuffHead(buff){};
   framecount_t frames_avaible(); //可用帧
   framecount_t frames_avaible_memcontine(); //
@@ -82,8 +85,10 @@ public:
   framecount_t pop_copy_noblock_redu(framecount_t fc, void *p);
 #if RHEAD_BLOCK_EN
   framecount_t pop_copy_block(framecount_t fc, void *p);
+  void wait_frameid(framecount_t fid);
   void wait_frames(framecount_t fc);
   framecount_t wait_frames_memcontine(framecount_t fc);
+  friend class BuffHeadReads;
 #endif
 };
 
@@ -94,6 +99,7 @@ private:
 public:
   BuffHeadReads(Buffer *buff):buff(buff){};
   framecount_t get_firstkeep();
+  framecount_t get_firstwaituntil();
   BuffHeadRead *new_head();
 };
 
@@ -110,6 +116,7 @@ private:
 #if RHEAD_BLOCK_EN
   mutex mtx_r;
   condition_variable cv_r;
+  framecount_t min_until; //直到该id才noitfy,修改需加锁
 #endif
 public:
   Buffer(size_t f_size, framecount_t fc_cap);

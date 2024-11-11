@@ -28,7 +28,7 @@ void Pub(BuffHeadWrite *hw, string tag)
 {
   for(int i=0;i<1000;i++){
     uint64_t data = i;
-    hw->push_block(1, &data);
+    hw->push_force(1, &data);
     //cout << "put data:" << data << endl;
     printf("%s%ld\n", tag.c_str(), data);
     this_thread::sleep_for(chrono::milliseconds(20));

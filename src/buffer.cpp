@@ -79,8 +79,10 @@ int BuffHeadWrite::push_block(framecount_t fc, void *p)
     p += buff->f_size*n;
     fc -= n;
 #if RHEAD_BLOCK_EN
-    //unique_lock<mutex> lock(buff->mtx_r);
-    buff->cv_r.notify_all();
+    if(frame_i >= buff->min_until){
+      printf("push block: cv_r notify\n");
+      buff->cv_r.notify_all();
+    }
 #endif
   }
   if(frame_i != buff->r_heads.get_firstkeep()){
@@ -95,6 +97,12 @@ int BuffHeadWrite::push_force(framecount_t fc, void *p)
 {
   memcpy(get_ptr(), p, fc*buff->f_size);
   frame_i += fc;
+#if RHEAD_BLOCK_EN
+  if(frame_i >= buff->min_until){
+    printf("push force: cv_r notify\n");
+    buff->cv_r.notify_all();
+  }
+#endif
   return frame_i;
 }
 #endif
@@ -153,6 +161,11 @@ framecount_t BuffHeadRead::pop_copy_noblock_base(framecount_t fc, void *p)
     frame_i += fc;
     p += fc*buff->f_size;
   }
+#if !WHEAD_FORCE_ONLY
+    if(buff->full){
+      buff->cv_w.notify_all();
+    }
+#endif
   return fc;
 }
 
@@ -192,9 +205,13 @@ framecount_t BuffHeadRead::pop_copy_block(framecount_t fc, void *p)
   }
 #endif
   framecount_t fc_ = fc;
+  bool hasWait = false;
   while(fc_ > 0){
     if(frame_i == buff->w_head.getpos()){
+      hasWait = true;
+      wait_until = 0;
       unique_lock<mutex> lock(buff->mtx_r);
+      buff->min_until = 0;
       buff->cv_r.wait(lock);
     }
     framecount_t n = frames_avaible_memcontine();
@@ -211,15 +228,37 @@ framecount_t BuffHeadRead::pop_copy_block(framecount_t fc, void *p)
     }
 #endif
   }
+  if(hasWait){
+    wait_until = FRAMECOUNT_MAX;
+    unique_lock<mutex> lock(buff->mtx_r);
+    buff->min_until = buff->r_heads.get_firstwaituntil();
+  }
   return fc;
+}
+
+void BuffHeadRead::wait_frameid(framecount_t fid)
+{
+  if(buff->w_head.getpos() >= fid){
+    return;
+  }
+  wait_until = fid;
+  while(1){
+    unique_lock<mutex> lock(buff->mtx_r);
+    if(fid < buff->min_until){
+      buff->min_until = fid;
+    }
+    buff->cv_r.wait(lock);
+    if(buff->w_head.getpos() >= wait_until){
+      wait_until = FRAMECOUNT_MAX;
+      buff->min_until = buff->r_heads.get_firstwaituntil();
+      break;
+    }
+  }
 }
 
 void BuffHeadRead::wait_frames(framecount_t fc)
 {
-  while(frames_avaible() < fc){
-    unique_lock<mutex> lock(buff->mtx_r);
-    buff->cv_r.wait(lock);
-  }
+  wait_frameid(getpos() + fc);
 }
 
 framecount_t BuffHeadRead::wait_frames_memcontine(framecount_t fc)
@@ -246,6 +285,20 @@ framecount_t BuffHeadReads::get_firstkeep()
   return m;
 }
 
+framecount_t BuffHeadReads::get_firstwaituntil()
+{
+  framecount_t m = FRAMECOUNT_MAX;
+  for(auto h: heads){
+    if(h->wait_until < m){
+      m = h->wait_until;
+    }
+    if(m <= 0){
+      return 0;
+    }
+  }
+  return m;
+}
+
 BuffHeadRead *BuffHeadReads::new_head()
 {
   BuffHeadRead *h = new BuffHeadRead(buff);
@@ -254,7 +307,11 @@ BuffHeadRead *BuffHeadReads::new_head()
 }
 
 Buffer::Buffer(size_t f_size, framecount_t fc_cap):
-  f_size(f_size), fc_cap(fc_cap), w_head(this), r_heads(this)
+  f_size(f_size), fc_cap(fc_cap),
+#if RHEAD_BLOCK_EN
+  min_until(FRAMECOUNT_MAX),
+#endif
+  w_head(this), r_heads(this)
 {
   p = malloc(f_size*fc_cap);
 }

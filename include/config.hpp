@@ -26,6 +26,7 @@
 
 typedef int32_t framecount_t;
 typedef int32_t buffindex_t;
+#define FRAMECOUNT_MAX    INT32_MAX
 
 #ifndef THREAD_SYNC_EN
 #define THREAD_SYNC_EN    1 //使用线程同步

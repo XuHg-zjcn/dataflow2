@@ -6,8 +6,8 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-CXXFLAGS = -Iinclude -g
-CFLAGS = -Iinclude -g
+CXXFLAGS = -Iinclude -g -DWHEAD_FORCE_ONLY=1
+CFLAGS = -Iinclude -g -DWHEAD_FORCE_ONLY=1
 
 
 all: test
