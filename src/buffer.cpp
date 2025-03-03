@@ -1,6 +1,6 @@
 /*************************************************************************
  *  dataflow2 buffer
- *  Copyright (C) 2024  Xu Ruijun
+ *  Copyright (C) 2024-2025  Xu Ruijun
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  ************************************************************************/
 #include "buffer.hpp"
 #include "config.hpp"
+#include <chrono>
 
 
 //member functions of BuffHead
@@ -256,9 +257,38 @@ void BuffHeadRead::wait_frameid(framecount_t fid)
   }
 }
 
+int BuffHeadRead::wait_frameid_timeout(framecount_t fid, long timeout)
+{
+  if(buff->w_head.getpos() >= fid){
+    return 0;
+  }
+  const auto tmax = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
+  wait_until = fid;
+  while(1){
+    unique_lock<mutex> lock(buff->mtx_r);
+    if(fid < buff->min_until){
+      buff->min_until = fid;
+    }
+    if(buff->cv_r.wait_until(lock, tmax) == std::cv_status::timeout){
+      return 1;
+    }
+    if(buff->w_head.getpos() >= wait_until){
+      wait_until = FRAMECOUNT_MAX;
+      buff->min_until = buff->r_heads.get_firstwaituntil();
+      break;
+    }
+  }
+  return 0;
+}
+
 void BuffHeadRead::wait_frames(framecount_t fc)
 {
   wait_frameid(getpos() + fc);
+}
+
+int BuffHeadRead::wait_frames_timeout(framecount_t fc, long timeout)
+{
+  return wait_frameid_timeout(getpos() + fc, timeout);
 }
 
 framecount_t BuffHeadRead::wait_frames_memcontine(framecount_t fc)
@@ -269,6 +299,19 @@ framecount_t BuffHeadRead::wait_frames_memcontine(framecount_t fc)
   }
   wait_frames(fc);
   return fc;
+}
+
+framecount_t BuffHeadRead::wait_frames_memcontine_timeout(framecount_t fc, long timeout)
+{
+  framecount_t fright = buff->fc_cap - framecount_to_buffindex(frame_i);
+  if(fright < fc){
+    fc = fright;
+  }
+  if(wait_frames_timeout(fc, timeout) == 0){
+    return fc;
+  }else{
+    return std::min(frames_avaible(), fc);
+  }
 }
 #endif
 

@@ -1,6 +1,6 @@
 /*************************************************************************
  *  dataflow2 buffer
- *  Copyright (C) 2024  Xu Ruijun
+ *  Copyright (C) 2024-2025  Xu Ruijun
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -86,8 +86,11 @@ public:
 #if RHEAD_BLOCK_EN
   framecount_t pop_copy_block(framecount_t fc, void *p);
   void wait_frameid(framecount_t fid);
+  int wait_frameid_timeout(framecount_t fid, long timeout);
   void wait_frames(framecount_t fc);
+  int wait_frames_timeout(framecount_t fid, long timeout);
   framecount_t wait_frames_memcontine(framecount_t fc);
+  framecount_t wait_frames_memcontine_timeout(framecount_t fc, long timeout);
   friend class BuffHeadReads;
 #endif
 };

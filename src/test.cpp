@@ -1,6 +1,6 @@
 /*************************************************************************
  *  Test program of dataflow2
- *  Copyright (C) 2024  Xu Ruijun
+ *  Copyright (C) 2024-2025  Xu Ruijun
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,13 +36,27 @@ void Pub(BuffHeadWrite *hw, string tag)
   }
 }
 
-void Sub(BuffHeadRead *hr, string tag)
+void SubCopy(BuffHeadRead *hr, string tag)
 {
   while(1){
     uint64_t data;
     hr->pop_copy_block(1, &data);
     //cout << tag << val << endl;
     printf("%s%ld\n", tag.c_str(), data);
+  }
+}
+
+void SubNoCopy(BuffHeadRead *hr, string tag)
+{
+  while(1){
+    framecount_t fc = hr->wait_frames_memcontine_timeout(4, 50);
+    uint64_t *data = (uint64_t *)hr->get_ptr();
+    printf("%s get %d:", tag.c_str(), fc);
+    for(int i=0;i<fc;i++){
+      printf("%ld,", data[i]);
+    }
+    printf("\n");
+    hr->drop(fc);
   }
 }
 
@@ -56,8 +70,8 @@ int main()
 {
   Buffer buff = Buffer(8, 100);
   thread pub(Pub, &buff.w_head, "pub : ");
-  //thread sub1(Sub, buff.r_heads.new_head(), "sub1: ");
-  //thread sub2(Sub, buff.r_heads.new_head(), "sub2: ");
+  thread sub1(SubCopy, buff.r_heads.new_head(), "sub_c: ");
+  thread sub2(SubNoCopy, buff.r_heads.new_head(), "subnc: ");
   thread rec(Rec, buff.r_heads.new_head(), "data/rec_%Y%m%d_%#.dat");
   pub.join();
   //sub1.join();
