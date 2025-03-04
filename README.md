@@ -7,7 +7,7 @@
 |:---:|:---:|:-------                      |
 |Buffer|可用，待完善| 一进多出队列容器，共享缓冲区|
 |Writer|可用，待完善| 数据持久化写入器 |
-|Sender|还未开始    | 数据发送器       |
+|Sender|开发中      | 数据发送器       |
 
 
 ## 目标功能
@@ -24,9 +24,9 @@ Copyright (C) 2024 徐瑞骏
 
 程序部分以GNU通用公共许可证第三版或更新(GNU GPLv3 or later)授权
 
-本READ采用以下许可证
+本README采用以下许可证
 ```
-Copyright (C) 2024 Xu Ruijun
+Copyright (C) 2024-2025 Xu Ruijun
 
 Copying and distribution of this README file, with or without modification,
 are permitted in any medium without royalty provided the copyright

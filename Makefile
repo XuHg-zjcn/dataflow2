@@ -1,5 +1,5 @@
 # Makefile for dataflow2
-# Copyright (C) 2024  Xu Ruijun
+# Copyright (C) 2024-2025  Xu Ruijun
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -18,7 +18,7 @@ all: test
 %.o: src/%.c
 	${CC} ${CFLAGS} $^ -c -o $@
 
-test: src/test.cpp buffer.o writer.o misc.o
+test: src/test.cpp buffer.o writer.o misc.o sender.o
 	${CXX} ${CXXFLAGS} $^ -o $@
 
 clean:

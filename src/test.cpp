@@ -20,6 +20,7 @@
 //#include <iostream>
 #include "buffer.hpp"
 #include "writer.hpp"
+#include "sender.hpp"
 
 using namespace std;
 
@@ -30,8 +31,8 @@ void Pub(BuffHeadWrite *hw, string tag)
     uint64_t data = i;
     hw->push_force(1, &data);
     //cout << "put data:" << data << endl;
-    printf("%s%ld\n", tag.c_str(), data);
-    this_thread::sleep_for(chrono::milliseconds(20));
+    //printf("%s%ld\n", tag.c_str(), data);
+    this_thread::sleep_for(chrono::milliseconds(100));
     //TODO: 注释掉延时函数会导致未全部发送就卡住问题，待修复
   }
 }
@@ -60,6 +61,12 @@ void SubNoCopy(BuffHeadRead *hr, string tag)
   }
 }
 
+void Send(Buffer *buff)
+{
+  Sender s = Sender(buff);
+  s.start_server();
+}
+
 void Rec(BuffHeadRead *hr, string pathfmt)
 {
   Writer writer(hr, pathfmt, 10, 1024);
@@ -70,9 +77,10 @@ int main()
 {
   Buffer buff = Buffer(8, 100);
   thread pub(Pub, &buff.w_head, "pub : ");
-  thread sub1(SubCopy, buff.r_heads.new_head(), "sub_c: ");
-  thread sub2(SubNoCopy, buff.r_heads.new_head(), "subnc: ");
+  //thread sub1(SubCopy, buff.r_heads.new_head(), "sub_c: ");
+  //thread sub2(SubNoCopy, buff.r_heads.new_head(), "subnc: ");
   thread rec(Rec, buff.r_heads.new_head(), "data/rec_%Y%m%d_%#.dat");
+  thread send(Send, &buff);
   pub.join();
   //sub1.join();
   //sub2.join();
