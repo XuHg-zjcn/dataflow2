@@ -8,9 +8,9 @@
 
 CXXFLAGS = -Iinclude -g -DWHEAD_FORCE_ONLY=1
 CFLAGS = -Iinclude -g -DWHEAD_FORCE_ONLY=1
+OBJS = buffer.o writer.o misc.o sender.o source.o
 
-
-all: test
+all: test view
 
 %.o: src/%.cpp
 	${CXX} ${CXXFLAGS} $^ -c -o $@
@@ -18,8 +18,11 @@ all: test
 %.o: src/%.c
 	${CC} ${CFLAGS} $^ -c -o $@
 
-test: src/test.cpp buffer.o writer.o misc.o sender.o
-	${CXX} ${CXXFLAGS} $^ -o $@
+test: src/test.cpp ${OBJS}
+	${CXX} ${CXXFLAGS} $^ -lcjson -o $@
+
+view: src/view.cpp ${OBJS}
+	${CXX} ${CXXFLAGS} $^ -lcjson -o $@
 
 clean:
 	rm *.o test

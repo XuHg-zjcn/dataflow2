@@ -1,0 +1,26 @@
+{
+    "name":"example_source",
+    "uuid":"ab72619b-92a3-403b-98cf-45699b778723",
+    "descript":"example source json for dataflow2 program",
+    "create_date":"2025-03-05T12:00:00 +08:00",
+    "version":1,
+    "ver_date":"2025-03-05T12:00:00 +08:00",
+    "addr":"127.0.0.1:9871",
+    "streams":[
+	{"id":1,
+	 "name":"air",
+	 "short_name":"a",
+	 "descript":"temperate, humity, pressure of air",
+	 "array":{"shape":[3], "fr":1.0}},
+	{"id":2,
+	 "name":"audio",
+	 "short_name":"s",
+	 "descript":"sound from mic",
+	 "array":{"shape":[2], "fr":44100}},
+	{"id":3,
+	 "name":"video",
+	 "short_name":"v",
+	 "descript":"video from camera",
+	 "array":{"shape":[1920,1080,3], "fr":30}}
+    ]
+}

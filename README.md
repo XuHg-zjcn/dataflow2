@@ -19,6 +19,10 @@
 - 配套可视化工具
 
 
+# 编译
+依赖cjson  
+`sudo apt install libcjson-dev`安装
+
 ## 版权和许可证
 Copyright (C) 2024 徐瑞骏
 
